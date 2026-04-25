@@ -1,0 +1,12 @@
+{
+  "mujtabahatif@gmail.com": {
+    "email": "mujtabahatif@gmail.com",
+    "password": "$2a$10$N9qo8uLOickgx2ZMRZoMy.Mr/.qrZ6Y4H6RkRc5X8XQwUqLqYqLqO",
+    "isOwner": true,
+    "isApproved": true,
+    "isBlocked": false,
+    "apiKey": "",
+    "secretKey": "",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
