@@ -99,7 +99,7 @@ app.post('/api/register', (req, res) => {
     const users = readUsers();
     if (users[email]) return res.status(400).json({ success: false, message: 'Exists' });
     const pending = readPending();
-    if (pending[email]) return res.status(400). json({ success: false, message: 'Pending' });
+    if (pending[email]) return res.status(400).json({ success: false, message: 'Pending' });
     pending[email] = { email, password: bcrypt.hashSync(password, 10), requestedAt: new Date().toISOString() };
     writePending(pending);
     res.json({ success: true, message: 'Request sent to owner' });
@@ -186,7 +186,7 @@ async function cancelOrder(apiKey, secretKey, symbol, orderId, testnet = false) 
     return await binanceRequest(apiKey, secretKey, '/api/v3/order', { symbol, orderId }, 'DELETE', testnet);
 }
 
-// ==================== DIAGNOSTIC ENDPOINT (TELLS YOU WHY KEYS FAIL) ====================
+// ==================== DIAGNOSTIC ENDPOINT ====================
 app.post('/api/test-binance-keys', authenticate, async (req, res) => {
     const { apiKey, secretKey, accountType } = req.body;
     const useTestnet = accountType === 'testnet';
