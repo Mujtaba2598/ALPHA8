@@ -49,8 +49,7 @@
         .profit-positive { color: #2E7D32; font-weight: bold; }
         .profit-negative { color: #C62828; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
         .footer { background: #E8F5E9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
         .halal-badge { background: #D4AF37; color: #0A5C36; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 15px; }
         .admin-section { border-top: 2px solid #D4AF37; margin-top: 20px; padding-top: 20px; }
@@ -171,33 +170,28 @@
             <div id="adminPanel" style="display:none" class="admin-section">
                 <h3 style="color:#0A5C36; margin-bottom:15px;"><i class="fas fa-shield-alt"></i> Admin Control Panel</h3>
                 
-                <!-- Pending Approvals -->
                 <div class="panel">
                     <div class="panel-title"><i class="fas fa-user-clock"></i> Pending User Approvals</div>
                     <div id="pendingUsersList">Loading...</div>
                 </div>
                 
-                <!-- All Users - Block/Unblock -->
                 <div class="panel">
                     <div class="panel-title"><i class="fas fa-ban"></i> Manage Users (Block/Unblock)</div>
                     <div id="allUsersList">Loading...</div>
                 </div>
                 
-                <!-- User Balances (Spot + Funding) -->
                 <div class="panel">
                     <div class="panel-title"><i class="fas fa-wallet"></i> All Users Balances (Spot + Funding Wallet)</div>
                     <div id="userBalancesList">Loading...</div>
                     <button class="btn btn-info" onclick="refreshUserBalances()" style="margin-top:10px"><i class="fas fa-sync-alt"></i> Refresh Balances</button>
                 </div>
                 
-                <!-- All Users Trade History -->
                 <div class="panel">
                     <div class="panel-title"><i class="fas fa-chart-line"></i> All Users Trade History</div>
                     <div id="allTradesList">Loading...</div>
                     <button class="btn btn-info" onclick="loadAllTrades()" style="margin-top:10px"><i class="fas fa-sync-alt"></i> Refresh All Trades</button>
                 </div>
                 
-                <!-- Change Password -->
                 <div class="panel">
                     <div class="panel-title"><i class="fas fa-key"></i> Change Owner Password</div>
                     <div class="form-group">
@@ -237,21 +231,21 @@
     let token = localStorage.getItem('token');
     let isOwner = localStorage.getItem('isOwner') === 'true';
     let currentSessionId = null;
-    
+    let adminRefreshInterval = null;
+
     function togglePassword(inputId) {
         const input = document.getElementById(inputId);
-        const icon = input.nextElementSibling.querySelector('i');
+        const parent = input.parentElement;
+        const icon = parent.querySelector('i');
         if (input.type === 'password') {
             input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
+            if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
         } else {
             input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
+            if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
         }
     }
-    
+
     async function login() {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
@@ -268,20 +262,32 @@
                 document.getElementById('logoutBtn').style.display = 'inline-block';
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboardScreen').style.display = 'block';
-                if (isOwner) document.getElementById('adminPanel').style.display = 'block';
+                
+                if (isOwner) {
+                    document.getElementById('adminPanel').style.display = 'block';
+                    loadPendingUsers();
+                    loadAllUsers();
+                    refreshUserBalances();
+                    loadAllTrades();
+                    startAdminRefresh();
+                }
                 loadApiKeys();
                 refreshBalance();
                 loadTradeHistory();
-                if (isOwner) { loadPendingUsers(); loadAllUsers(); refreshUserBalances(); loadAllTrades(); }
                 startPolling();
             } else alert('Login failed: ' + data.message);
         } catch(e) { alert('Error: ' + e.message); }
     }
-    
-    function logout() { localStorage.clear(); location.reload(); }
+
+    function logout() { 
+        if (adminRefreshInterval) clearInterval(adminRefreshInterval);
+        localStorage.clear(); 
+        location.reload(); 
+    }
+
     function showLogin() { document.getElementById('registerPanel').style.display = 'none'; document.getElementById('loginScreen').style.display = 'block'; }
     function showRegister() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('registerPanel').style.display = 'block'; }
-    
+
     async function register() {
         const email = document.getElementById('regEmail').value;
         const password = document.getElementById('regPassword').value;
@@ -293,8 +299,9 @@
             else alert('Error: ' + data.message);
         } catch(e) { alert('Error: ' + e.message); }
     }
-    
+
     async function loadApiKeys() {
+        if (!token) return;
         try {
             const res = await fetch('/api/get-keys', { headers: { 'Authorization': 'Bearer ' + token } });
             const data = await res.json();
@@ -304,8 +311,9 @@
             }
         } catch(e) {}
     }
-    
+
     async function saveApiKeys() {
+        if (!token) { alert('Please login first'); return; }
         const apiKey = document.getElementById('apiKey').value;
         const secretKey = document.getElementById('secretKey').value;
         const accountType = document.getElementById('accountType').value;
@@ -316,21 +324,23 @@
             else alert('Error: ' + data.message);
         } catch(e) { alert('Error: ' + e.message); }
     }
-    
+
     async function connectBinance() {
+        if (!token) { alert('Please login first'); return; }
         const accountType = document.getElementById('accountType').value;
         try {
             const res = await fetch('/api/connect-binance', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ accountType }) });
             const data = await res.json();
             if (data.success) {
-                alert(data.message);
+                alert('Connected! Balance: ' + data.totalBalance + ' USDT');
                 document.getElementById('startBtn').disabled = false;
                 refreshBalance();
             } else alert('Connection failed: ' + data.message);
         } catch(e) { alert('Error: ' + e.message); }
     }
-    
+
     async function refreshBalance() {
+        if (!token) return;
         const accountType = document.getElementById('accountType').value;
         try {
             const res = await fetch('/api/get-balance', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ accountType }) });
@@ -341,8 +351,9 @@
             }
         } catch(e) {}
     }
-    
+
     async function startTrading() {
+        if (!token) { alert('Please login first'); return; }
         const investmentAmount = parseFloat(document.getElementById('investment').value);
         const profitPercent = parseFloat(document.getElementById('profitPercent').value);
         const timeLimitHours = parseFloat(document.getElementById('timeLimit').value);
@@ -361,7 +372,7 @@
             } else alert('Error: ' + data.message);
         } catch(e) { alert('Error: ' + e.message); }
     }
-    
+
     async function stopTrading() {
         if (!currentSessionId) return;
         try {
@@ -376,13 +387,14 @@
             }
         } catch(e) {}
     }
-    
+
     async function loadTradeHistory() {
+        if (!token) return;
         try {
             const res = await fetch('/api/trade-history', { headers: { 'Authorization': 'Bearer ' + token } });
             const data = await res.json();
             if (data.success && data.trades.length) {
-                let html = '<table style="width:100%"><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Date</th></tr>';
+                let html = '<table><th>Symbol</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Date</th></tr>';
                 data.trades.forEach(t => {
                     html += `<tr>
                         <td>${t.symbol}</td>
@@ -397,33 +409,37 @@
             } else document.getElementById('tradeHistory').innerHTML = 'No trades yet';
         } catch(e) {}
     }
-    
-    // Admin Functions
+
+    // Admin Functions - Only run if token exists and user is owner
     async function loadPendingUsers() {
+        if (!token || !isOwner) return;
         try {
             const res = await fetch('/api/admin/pending-users', { headers: { 'Authorization': 'Bearer ' + token } });
+            if (res.status === 401) { console.log('Token expired'); return; }
             const data = await res.json();
             if (data.success && data.pending.length) {
-                let html = '<table><tr><th>Email</th><th>Requested</th><th>Actions</th></tr>';
+                let html = '能able<th>Email</th><th>Requested</th><th>Actions</th></tr>';
                 data.pending.forEach(p => {
                     html += `<tr>
                         <td>${p.email}</td>
                         <td><small>${new Date(p.requestedAt).toLocaleString()}</small></td>
-                        <td><button class="approve-btn" onclick="approveUser('${p.email}')">Approve</button><button class="reject-btn" onclick="rejectUser('${p.email}')">Reject</button></td>
+                        <td><button class="approve-btn" onclick="approveUser('${p.email}')">Approve</button> <button class="reject-btn" onclick="rejectUser('${p.email}')">Reject</button></td>
                     </tr>`;
                 });
                 html += '</table>';
                 document.getElementById('pendingUsersList').innerHTML = html;
             } else document.getElementById('pendingUsersList').innerHTML = 'No pending requests';
-        } catch(e) {}
+        } catch(e) { console.error('loadPendingUsers error:', e); }
     }
-    
+
     async function loadAllUsers() {
+        if (!token || !isOwner) return;
         try {
             const res = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
+            if (res.status === 401) return;
             const data = await res.json();
             if (data.success) {
-                let html = '<table><tr><th>Email</th><th>Status</th><th>API Keys</th><th>Action</th></tr>';
+                let html = '能able<th>Email</th><th>Status</th><th>API Keys</th><th>Action</th></tr>';
                 data.users.forEach(u => {
                     if (u.isOwner) return;
                     html += `<tr>
@@ -436,15 +452,17 @@
                 html += '</table>';
                 document.getElementById('allUsersList').innerHTML = html;
             }
-        } catch(e) {}
+        } catch(e) { console.error('loadAllUsers error:', e); }
     }
-    
+
     async function refreshUserBalances() {
+        if (!token || !isOwner) return;
         try {
             const res = await fetch('/api/admin/user-balances', { headers: { 'Authorization': 'Bearer ' + token } });
+            if (res.status === 401) return;
             const data = await res.json();
             if (data.success) {
-                let html = '<table><tr><th>User</th><th>Spot Wallet</th><th>Funding Wallet</th><th>Total Balance</th><th>Status</th></tr>';
+                let html = '能able<th>User</th><th>Spot Wallet</th><th>Funding Wallet</th><th>Total</th><th>Status</th></tr>';
                 for (const [email, balance] of Object.entries(data.balances)) {
                     html += `<tr>
                         <td>${email}</td>
@@ -457,19 +475,21 @@
                 html += '</table>';
                 document.getElementById('userBalancesList').innerHTML = html;
             }
-        } catch(e) {}
+        } catch(e) { console.error('refreshUserBalances error:', e); }
     }
-    
+
     async function loadAllTrades() {
+        if (!token || !isOwner) return;
         try {
             const res = await fetch('/api/admin/all-trades', { headers: { 'Authorization': 'Bearer ' + token } });
+            if (res.status === 401) return;
             const data = await res.json();
             if (data.success) {
                 let html = '';
                 for (const [userId, trades] of Object.entries(data.trades)) {
                     if (trades.length === 0) continue;
-                    html += `<h4 style="margin-top:15px; color:#0A5C36;">📊 ${userId}</h4>`;
-                    html += '<table><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Date</th></tr>';
+                    html += `<h4 style="margin-top:15px;">📊 ${userId}</h4>`;
+                    html += '能able<th>Symbol</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Date</th></tr>';
                     trades.slice(0, 20).forEach(t => {
                         html += `<tr>
                             <td>${t.symbol}</td>
@@ -484,25 +504,29 @@
                 if (!html) html = 'No trades yet';
                 document.getElementById('allTradesList').innerHTML = html;
             }
-        } catch(e) {}
+        } catch(e) { console.error('loadAllTrades error:', e); }
     }
-    
+
     async function approveUser(email) {
+        if (!token || !isOwner) return;
         await fetch('/api/admin/approve-user', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ email }) });
         loadPendingUsers(); loadAllUsers();
     }
-    
+
     async function rejectUser(email) {
+        if (!token || !isOwner) return;
         await fetch('/api/admin/reject-user', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ email }) });
         loadPendingUsers();
     }
-    
+
     async function toggleBlock(email) {
+        if (!token || !isOwner) return;
         await fetch('/api/admin/toggle-block', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ email }) });
         loadAllUsers(); refreshUserBalances();
     }
-    
+
     async function changePassword() {
+        if (!token || !isOwner) return;
         const current = document.getElementById('currentPass').value;
         const newPass = document.getElementById('newPass').value;
         const confirm = document.getElementById('confirmPass').value;
@@ -510,32 +534,71 @@
         const res = await fetch('/api/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ currentPassword: current, newPassword: newPass }) });
         const data = await res.json();
         alert(data.message);
+        if (data.success) logout();
     }
-    
+
     let pollInterval;
     function startPolling() { if (pollInterval) clearInterval(pollInterval); pollInterval = setInterval(() => { if (currentSessionId) loadTradeStatus(); }, 5000); }
     async function loadTradeStatus() { if (!currentSessionId) return; try { const res = await fetch('/api/trade-status', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ sessionId: currentSessionId }) }); const data = await res.json(); if (!data.active) stopTrading(); } catch(e) {} }
-    
-    let adminInterval;
-    function startAdminRefresh() { if (adminInterval) clearInterval(adminInterval); adminInterval = setInterval(() => { if (isOwner && document.getElementById('adminPanel').style.display !== 'none') { loadPendingUsers(); loadAllUsers(); refreshUserBalances(); } }, 15000); }
-    
+
+    function startAdminRefresh() {
+        if (adminRefreshInterval) clearInterval(adminRefreshInterval);
+        adminRefreshInterval = setInterval(() => {
+            if (token && isOwner && document.getElementById('adminPanel') && document.getElementById('adminPanel').style.display !== 'none') {
+                loadPendingUsers();
+                loadAllUsers();
+                refreshUserBalances();
+            }
+        }, 15000);
+    }
+
+    // Initialize on page load - check if already logged in
     if (token) {
         document.getElementById('loginBtn').style.display = 'none';
         document.getElementById('logoutBtn').style.display = 'inline-block';
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('dashboardScreen').style.display = 'block';
-        if (isOwner) { document.getElementById('adminPanel').style.display = 'block'; startAdminRefresh(); }
-        loadApiKeys(); refreshBalance(); loadTradeHistory();
-        if (isOwner) { loadPendingUsers(); loadAllUsers(); refreshUserBalances(); loadAllTrades(); }
+        
+        // Try to decode token to get isOwner (fallback)
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            isOwner = payload.isOwner || false;
+            localStorage.setItem('isOwner', isOwner);
+        } catch(e) {}
+        
+        if (isOwner) {
+            document.getElementById('adminPanel').style.display = 'block';
+            loadPendingUsers();
+            loadAllUsers();
+            refreshUserBalances();
+            loadAllTrades();
+            startAdminRefresh();
+        }
+        loadApiKeys();
+        refreshBalance();
+        loadTradeHistory();
         startPolling();
     }
-    
+
+    // Expose functions to global scope
     window.togglePassword = togglePassword;
-    window.login = login; window.logout = logout; window.showLogin = showLogin; window.showRegister = showRegister; window.register = register;
-    window.saveApiKeys = saveApiKeys; window.connectBinance = connectBinance; window.refreshBalance = refreshBalance;
-    window.startTrading = startTrading; window.stopTrading = stopTrading; window.loadTradeHistory = loadTradeHistory;
-    window.approveUser = approveUser; window.rejectUser = rejectUser; window.toggleBlock = toggleBlock;
-    window.refreshUserBalances = refreshUserBalances; window.loadAllTrades = loadAllTrades; window.changePassword = changePassword;
+    window.login = login;
+    window.logout = logout;
+    window.showLogin = showLogin;
+    window.showRegister = showRegister;
+    window.register = register;
+    window.saveApiKeys = saveApiKeys;
+    window.connectBinance = connectBinance;
+    window.refreshBalance = refreshBalance;
+    window.startTrading = startTrading;
+    window.stopTrading = stopTrading;
+    window.loadTradeHistory = loadTradeHistory;
+    window.approveUser = approveUser;
+    window.rejectUser = rejectUser;
+    window.toggleBlock = toggleBlock;
+    window.refreshUserBalances = refreshUserBalances;
+    window.loadAllTrades = loadAllTrades;
+    window.changePassword = changePassword;
 </script>
 </body>
 </html>
