@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕋 100% Halal Trading Bot - Real Binance Trading</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0A2E1C 0%, #0A3C26 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .header { background: #0A5C36; color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; border-bottom: 3px solid #D4AF37; }
+        .logo h1 { font-size: 24px; }
+        .logo p { font-size: 12px; opacity: 0.8; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .btn-header { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+        .content { padding: 30px; }
+        .panel { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .panel-title { font-size: 18px; font-weight: 600; color: #0A5C36; margin-bottom: 15px; border-bottom: 2px solid #E8F5E9; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; color: #333; }
+        .password-wrapper { position: relative; display: flex; align-items: center; }
+        .password-wrapper input { flex: 1; padding-right: 40px; }
+        .toggle-password { position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #0A5C36; font-size: 16px; }
+        input, select { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; }
+        input:focus { border-color: #0A5C36; outline: none; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+        .btn-primary { background: #0A5C36; color: white; }
+        .btn-success { background: #2E7D32; color: white; }
+        .btn-danger { background: #C62828; color: white; }
+        .btn-warning { background: #F9A825; color: #333; }
+        .btn-info { background: #2196F3; color: white; }
+        .balance-card { background: #E8F5E9; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+        .balance-amount { font-size: 28px; font-weight: bold; color: #0A5C36; }
+        .balance-detail { font-size: 12px; color: #666; margin-top: 5px; }
+        .status { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
+        .status-active { background: #E8F5E9; color: #2E7D32; }
+        .status-inactive { background: #FFEBEE; color: #C62828; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot.green { background: #2E7D32; }
+        .dot.red { background: #C62828; }
+        .trade-list, .user-list { max-height: 300px; overflow-y: auto; }
+        .trade-item, .user-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .profit-positive { color: #2E7D32; font-weight: bold; }
+        .profit-negative { color: #C62828; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+        .footer { background: #E8F5E9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+        .halal-badge { background: #D4AF37; color: #0A5C36; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 15px; }
+        .admin-section { border-top: 2px solid #D4AF37; margin-top: 20px; padding-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #E8F5E9; color: #0A5C36; }
+        .block-btn { background: #C62828; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .unblock-btn { background: #2E7D32; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .approve-btn { background: #2E7D32; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin: 2px; }
+        .reject-btn { background: #C62828; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin: 2px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">
+            <h1><i class="fas fa-star-and-crescent"></i> Halal Trading Bot</h1>
+            <p>100% Sharia-Compliant • No Riba • No Gharar • No Maysir • No Leverage</p>
+        </div>
+        <div class="user-info">
+            <span id="userEmail">Not Logged In</span>
+            <button class="btn-header" id="loginBtn" onclick="showLogin()">Login</button>
+            <button class="btn-header" id="logoutBtn" style="display:none" onclick="logout()">Logout</button>
+        </div>
+    </div>
+    
+    <div class="content">
+        <!-- Login Screen -->
+        <div id="loginScreen" style="display:block">
+            <div class="panel" style="max-width: 400px; margin: 0 auto;">
+                <div class="panel-title"><i class="fas fa-lock"></i> Halal Account Access</div>
+                <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="loginPassword" placeholder="Password">
+                        <button class="toggle-password" onclick="togglePassword('loginPassword')"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="login()"><i class="fas fa-sign-in-alt"></i> Login</button>
+                <p style="margin-top:15px; text-align:center"><a href="#" onclick="showRegister()">Don't have an account? Register</a></p>
+            </div>
+            <div id="registerPanel" style="display:none; max-width:400px; margin:20px auto">
+                <div class="panel">
+                    <div class="panel-title"><i class="fas fa-user-plus"></i> Register</div>
+                    <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="regPassword">
+                            <button class="toggle-password" onclick="togglePassword('regPassword')"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="register()">Request Access</button>
+                    <p style="margin-top:10px"><a href="#" onclick="showLogin()">Back to Login</a></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard -->
+        <div id="dashboardScreen" style="display:none">
+            <div class="halal-badge"><i class="fas fa-check-circle"></i> 100% Halal • Real Binance API • Limit Orders Only • No Gambling • No Leverage</div>
+            
+            <div class="grid-2">
+                <!-- Left Column -->
+                <div>
+                    <div class="panel">
+                        <div class="panel-title"><i class="fas fa-key"></i> Binance API Keys</div>
+                        <div class="form-group"><label>API Key</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="apiKey" placeholder="Your Binance API Key">
+                                <button class="toggle-password" onclick="togglePassword('apiKey')"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Secret Key</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="secretKey" placeholder="Your Binance Secret Key">
+                                <button class="toggle-password" onclick="togglePassword('secretKey')"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Mode</label><select id="accountType"><option value="real">Real Binance</option><option value="testnet">Testnet (Practice)</option></select></div>
+                        <button class="btn btn-primary" onclick="saveApiKeys()"><i class="fas fa-save"></i> Save Keys</button>
+                        <button class="btn btn-success" onclick="connectBinance()"><i class="fas fa-plug"></i> Connect</button>
+                    </div>
+                    
+                    <div class="panel">
+                        <div class="panel-title"><i class="fas fa-wallet"></i> Wallet Balance</div>
+                        <div class="balance-card">
+                            <div class="balance-amount" id="balanceDisplay">-- USDT</div>
+                            <div class="balance-detail" id="balanceDetail">Connect to view balances</div>
+                        </div>
+                        <button class="btn btn-info" onclick="refreshBalance()"><i class="fas fa-sync-alt"></i> Refresh Balance</button>
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div>
+                    <div class="panel">
+                        <div class="panel-title"><i class="fas fa-chart-line"></i> Halal Trading Settings</div>
+                        <div class="form-group"><label>Investment per Trade ($)</label><input type="number" id="investment" value="20" min="10"></div>
+                        <div class="form-group"><label>Profit Target (%)</label><input type="number" id="profitPercent" value="0.5" min="0.1" max="5" step="0.1"></div>
+                        <div class="form-group"><label>Time Limit (Hours)</label><input type="number" id="timeLimit" value="24" min="1" max="168"></div>
+                        <button class="btn btn-success" id="startBtn" onclick="startTrading()" disabled><i class="fas fa-play"></i> Start Halal Trading</button>
+                        <button class="btn btn-danger" id="stopBtn" onclick="stopTrading()" disabled><i class="fas fa-stop"></i> Stop</button>
+                        <div id="tradeStatus" class="status status-inactive" style="margin-top:15px"><span class="dot red"></span> Not Trading</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trade History -->
+            <div class="panel">
+                <div class="panel-title"><i class="fas fa-history"></i> Your Trade History</div>
+                <div class="trade-list" id="tradeHistory">No trades yet</div>
+                <button class="btn btn-info" onclick="loadTradeHistory()" style="margin-top:10px"><i class="fas fa-sync-alt"></i> Refresh History</button>
+            </div>
+            
+            <!-- Admin Panel (Owner Only) -->
+            <div id="adminPanel" style="display:none" class="admin-section">
+                <h3 style="color:#0A5C36; margin-bottom:15px;"><i class="fas fa-shield-alt"></i> Admin Control Panel</h3>
+                
+                <!-- Pending Approvals -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fas fa-user-clock"></i> Pending User Approvals</div>
+                    <div id="pendingUsersList">Loading...</div>
+                </div>
+                
+                <!-- All Users - Block/Unblock -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fas fa-ban"></i> Manage Users (Block/Unblock)</div>
+                    <div id="allUsersList">Loading...</div>
+                </div>
+                
+                <!-- User Balances (Spot + Funding) -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fas fa-wallet"></i> All Users Balances (Spot + Funding Wallet)</div>
+                    <div id="userBalancesList">Loading...</div>
+                    <button class="btn btn-info" onclick="refreshUserBalances()" style="margin-top:10px"><i class="fas fa-sync-alt"></i> Refresh Balances</button>
+                </div>
+                
+                <!-- All Users Trade History -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fas fa-chart-line"></i> All Users Trade History</div>
+                    <div id="allTradesList">Loading...</div>
+                    <button class="btn btn-info" onclick="loadAllTrades()" style="margin-top:10px"><i class="fas fa-sync-alt"></i> Refresh All Trades</button>
+                </div>
+                
+                <!-- Change Password -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fas fa-key"></i> Change Owner Password</div>
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="currentPass">
+                            <button class="toggle-password" onclick="togglePassword('currentPass')"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="newPass">
+                            <button class="toggle-password" onclick="togglePassword('newPass')"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="confirmPass">
+                            <button class="toggle-password" onclick="togglePassword('confirmPass')"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p><i class="fas fa-star-and-crescent"></i> 100% Halal Trading • No Riba (Interest) • No Gharar (Uncertainty) • No Maysir (Gambling) • No Leverage • Real Binance API • Limit Orders Only</p>
+        <p style="font-size: 11px; margin-top: 5px;">Profit percentages are targets, not guarantees. Trading involves risk.</p>
+    </div>
+</div>
+
+<script>
+    let token = localStorage.getItem('token');
+    let isOwner = localStorage.getItem('isOwner') === 'true';
+    let currentSessionId = null;
+    
+    function togglePassword(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = input.nextElementSibling.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+    
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        try {
+            const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            const data = await res.json();
+            if (data.success) {
+                token = data.token;
+                isOwner = data.isOwner;
+                localStorage.setItem('token', token);
+                localStorage.setItem('isOwner', isOwner);
+                document.getElementById('userEmail').innerText = email;
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline-block';
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboardScreen').style.display = 'block';
+                if (isOwner) document.getElementById('adminPanel').style.display = 'block';
+                loadApiKeys();
+                refreshBalance();
+                loadTradeHistory();
+                if (isOwner) { loadPendingUsers(); loadAllUsers(); refreshUserBalances(); loadAllTrades(); }
+                startPolling();
+            } else alert('Login failed: ' + data.message);
+        } catch(e) { alert('Error: ' + e.message); }
+    }
+    
+    function logout() { localStorage.clear(); location.reload(); }
+    function showLogin() { document.getElementById('registerPanel').style.display = 'none'; document.getElementById('loginScreen').style.display = 'block'; }
+    function showRegister() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('registerPanel').style.display = 'block'; }
+    
+    async function register() {
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        if (!email || !password) { alert('Enter email and password'); return; }
+        try {
+            const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            const data = await res.json();
+            if (data.success) alert('Registration request sent! Owner will approve.');
+            else alert('Error: ' + data.message);
+        } catch(e) { alert('Error: ' + e.message); }
+    }
+    
+    async function loadApiKeys() {
+        try {
+            const res = await fetch('/api/get-keys', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('apiKey').value = data.apiKey;
+                document.getElementById('secretKey').value = data.secretKey;
+            }
+        } catch(e) {}
+    }
+    
+    async function saveApiKeys() {
+        const apiKey = document.getElementById('apiKey').value;
+        const secretKey = document.getElementById('secretKey').value;
+        const accountType = document.getElementById('accountType').value;
+        try {
+            const res = await fetch('/api/set-api-keys', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ apiKey, secretKey, accountType }) });
+            const data = await res.json();
+            if (data.success) alert(data.message);
+            else alert('Error: ' + data.message);
+        } catch(e) { alert('Error: ' + e.message); }
+    }
+    
+    async function connectBinance() {
+        const accountType = document.getElementById('accountType').value;
+        try {
+            const res = await fetch('/api/connect-binance', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ accountType }) });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('startBtn').disabled = false;
+                refreshBalance();
+            } else alert('Connection failed: ' + data.message);
+        } catch(e) { alert('Error: ' + e.message); }
+    }
+    
+    async function refreshBalance() {
+        const accountType = document.getElementById('accountType').value;
+        try {
+            const res = await fetch('/api/get-balance', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ accountType }) });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('balanceDisplay').innerText = data.total.toFixed(2) + ' USDT';
+                document.getElementById('balanceDetail').innerHTML = `Spot: ${data.spotBalance.toFixed(2)} USDT | Funding: ${data.fundingBalance.toFixed(2)} USDT`;
+            }
+        } catch(e) {}
+    }
+    
+    async function startTrading() {
+        const investmentAmount = parseFloat(document.getElementById('investment').value);
+        const profitPercent = parseFloat(document.getElementById('profitPercent').value);
+        const timeLimitHours = parseFloat(document.getElementById('timeLimit').value);
+        const accountType = document.getElementById('accountType').value;
+        
+        try {
+            const res = await fetch('/api/start-trading', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ investmentAmount, profitPercent, timeLimitHours, accountType }) });
+            const data = await res.json();
+            if (data.success) {
+                currentSessionId = data.sessionId;
+                alert(data.message);
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('tradeStatus').innerHTML = '<span class="dot green"></span> Trading Active';
+                document.getElementById('tradeStatus').className = 'status status-active';
+            } else alert('Error: ' + data.message);
+        } catch(e) { alert('Error: ' + e.message); }
+    }
+    
+    async function stopTrading() {
+        if (!currentSessionId) return;
+        try {
+            const res = await fetch('/api/stop-trading', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ sessionId: currentSessionId }) });
+            const data = await res.json();
+            if (data.success) {
+                currentSessionId = null;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('tradeStatus').innerHTML = '<span class="dot red"></span> Not Trading';
+                document.getElementById('tradeStatus').className = 'status status-inactive';
+            }
+        } catch(e) {}
+    }
+    
+    async function loadTradeHistory() {
+        try {
+            const res = await fetch('/api/trade-history', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.success && data.trades.length) {
+                let html = '<table style="width:100%"><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Date</th></tr>';
+                data.trades.forEach(t => {
+                    html += `<tr>
+                        <td>${t.symbol}</td>
+                        <td>$${t.entryPrice}</td>
+                        <td>$${t.exitPrice}</td>
+                        <td class="${t.profit > 0 ? 'profit-positive' : 'profit-negative'}">${t.profit > 0 ? '+' : ''}$${t.profit.toFixed(2)} (${t.profitPercent}%)</td>
+                        <td><small>${new Date(t.timestamp).toLocaleDateString()}</small></td>
+                    </tr>`;
+                });
+                html += '</table>';
+                document.getElementById('tradeHistory').innerHTML = html;
+            } else document.getElementById('tradeHistory').innerHTML = 'No trades yet';
+        } catch(e) {}
+    }
+    
+    // Admin Functions
+    async function loadPendingUsers() {
+        try {
+            const res = await fetch('/api/admin/pending-users', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.success && data.pending.length) {
+                let html = '<table><tr><th>Email</th><th>Requested</th><th>Actions</th></tr>';
+                data.pending.forEach(p => {
+                    html += `<tr>
+                        <td>${p.email}</td>
+                        <td><small>${new Date(p.requestedAt).toLocaleString()}</small></td>
+                        <td><button class="approve-btn" onclick="approveUser('${p.email}')">Approve</button><button class="reject-btn" onclick="rejectUser('${p.email}')">Reject</button></td>
+                    </tr>`;
+                });
+                html += '</table>';
+                document.getElementById('pendingUsersList').innerHTML = html;
+            } else document.getElementById('pendingUsersList').innerHTML = 'No pending requests';
+        } catch(e) {}
+    }
+    
+    async function loadAllUsers() {
+        try {
+            const res = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.success) {
+                let html = '<table><tr><th>Email</th><th>Status</th><th>API Keys</th><th>Action</th></tr>';
+                data.users.forEach(u => {
+                    if (u.isOwner) return;
+                    html += `<tr>
+                        <td>${u.email}</td>
+                        <td>${u.isBlocked ? '<span style="color:red">BLOCKED</span>' : '<span style="color:green">ACTIVE</span>'}</td>
+                        <td>${u.hasApiKeys ? '✅ Set' : '❌ Not Set'}</td>
+                        <td><button class="${u.isBlocked ? 'unblock-btn' : 'block-btn'}" onclick="toggleBlock('${u.email}')">${u.isBlocked ? 'Unblock' : 'Block'}</button></td>
+                    </tr>`;
+                });
+                html += '</table>';
+                document.getElementById('allUsersList').innerHTML = html;
+            }
+        } catch(e) {}
+    }
+    
+    async function refreshUserBalances() {
+        try {
+            const res = await fetch('/api/admin/user-balances', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.success) {
+                let html = '<table><tr><th>User</th><th>Spot Wallet</th><th>Funding Wallet</th><th>Total Balance</th><th>Status</th></tr>';
+                for (const [email, balance] of Object.entries(data.balances)) {
+                    html += `<tr>
+                        <td>${email}</td>
+                        <td>$${balance.spot?.toFixed(2) || '0'}</td>
+                        <td>$${balance.funding?.toFixed(2) || '0'}</td>
+                        <td><strong>$${balance.total?.toFixed(2) || '0'}</strong></td>
+                        <td>${balance.hasKeys ? '✅ Connected' : '❌ No Keys'}</td>
+                    </tr>`;
+                }
+                html += '</table>';
+                document.getElementById('userBalancesList').innerHTML = html;
+            }
+        } catch(e) {}
+    }
+    
+    async function loadAllTrades() {
+        try {
+            const res = await fetch('/api/admin/all-trades', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.success) {
+                let html = '';
+                for (const [userId, trades] of Object.entries(data.trades)) {
+                    if (trades.length === 0) continue;
+                    html += `<h4 style="margin-top:15px; color:#0A5C36;">📊 ${userId}</h4>`;
+                    html += '<table><tr><th>Symbol</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Date</th></tr>';
+                    trades.slice(0, 20).forEach(t => {
+                        html += `<tr>
+                            <td>${t.symbol}</td>
+                            <td>$${t.entryPrice?.toFixed(2)}</td>
+                            <td>$${t.exitPrice?.toFixed(2)}</td>
+                            <td class="${t.profit > 0 ? 'profit-positive' : 'profit-negative'}">${t.profit > 0 ? '+' : ''}$${t.profit?.toFixed(2)} (${t.profitPercent}%)</td>
+                            <td><small>${new Date(t.timestamp).toLocaleDateString()}</small></td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                }
+                if (!html) html = 'No trades yet';
+                document.getElementById('allTradesList').innerHTML = html;
+            }
+        } catch(e) {}
+    }
+    
+    async function approveUser(email) {
+        await fetch('/api/admin/approve-user', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ email }) });
+        loadPendingUsers(); loadAllUsers();
+    }
+    
+    async function rejectUser(email) {
+        await fetch('/api/admin/reject-user', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ email }) });
+        loadPendingUsers();
+    }
+    
+    async function toggleBlock(email) {
+        await fetch('/api/admin/toggle-block', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ email }) });
+        loadAllUsers(); refreshUserBalances();
+    }
+    
+    async function changePassword() {
+        const current = document.getElementById('currentPass').value;
+        const newPass = document.getElementById('newPass').value;
+        const confirm = document.getElementById('confirmPass').value;
+        if (newPass !== confirm) { alert('Passwords do not match'); return; }
+        const res = await fetch('/api/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ currentPassword: current, newPassword: newPass }) });
+        const data = await res.json();
+        alert(data.message);
+    }
+    
+    let pollInterval;
+    function startPolling() { if (pollInterval) clearInterval(pollInterval); pollInterval = setInterval(() => { if (currentSessionId) loadTradeStatus(); }, 5000); }
+    async function loadTradeStatus() { if (!currentSessionId) return; try { const res = await fetch('/api/trade-status', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ sessionId: currentSessionId }) }); const data = await res.json(); if (!data.active) stopTrading(); } catch(e) {} }
+    
+    let adminInterval;
+    function startAdminRefresh() { if (adminInterval) clearInterval(adminInterval); adminInterval = setInterval(() => { if (isOwner && document.getElementById('adminPanel').style.display !== 'none') { loadPendingUsers(); loadAllUsers(); refreshUserBalances(); } }, 15000); }
+    
+    if (token) {
+        document.getElementById('loginBtn').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('dashboardScreen').style.display = 'block';
+        if (isOwner) { document.getElementById('adminPanel').style.display = 'block'; startAdminRefresh(); }
+        loadApiKeys(); refreshBalance(); loadTradeHistory();
+        if (isOwner) { loadPendingUsers(); loadAllUsers(); refreshUserBalances(); loadAllTrades(); }
+        startPolling();
+    }
+    
+    window.togglePassword = togglePassword;
+    window.login = login; window.logout = logout; window.showLogin = showLogin; window.showRegister = showRegister; window.register = register;
+    window.saveApiKeys = saveApiKeys; window.connectBinance = connectBinance; window.refreshBalance = refreshBalance;
+    window.startTrading = startTrading; window.stopTrading = stopTrading; window.loadTradeHistory = loadTradeHistory;
+    window.approveUser = approveUser; window.rejectUser = rejectUser; window.toggleBlock = toggleBlock;
+    window.refreshUserBalances = refreshUserBalances; window.loadAllTrades = loadAllTrades; window.changePassword = changePassword;
+</script>
+</body>
+</html>
