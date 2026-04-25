@@ -12,7 +12,6 @@ const PORT = process.env.PORT || 10000;
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
 
-// ==================== HALAL ASSETS ====================
 const HALAL_ASSETS = [
     'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT',
     'XRPUSDT', 'DOTUSDT', 'LINKUSDT', 'MATICUSDT', 'AVAXUSDT'
@@ -28,20 +27,17 @@ const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(TRADES_DIR)) fs.mkdirSync(TRADES_DIR, { recursive: true });
 
-// ==================== FORCE CREATE / RESET OWNER ACCOUNT ====================
-if (!fs.existsSync(USERS_FILE)) {
-    const defaultUsers = {};
-    fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2));
-}
+// ==================== CREATE / RESET OWNER ACCOUNT ====================
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify({}, null, 2));
 
 let users = JSON.parse(fs.readFileSync(USERS_FILE));
 const ownerEmail = "mujtabahatif@gmail.com";
-const ownerPasswordPlain = "Mujtabah@2598";
+const ownerPass = "Mujtabah@2598";
+
 if (!users[ownerEmail]) {
-    console.log("⚠️ Owner account missing – creating now...");
     users[ownerEmail] = {
         email: ownerEmail,
-        password: bcrypt.hashSync(ownerPasswordPlain, 10),
+        password: bcrypt.hashSync(ownerPass, 10),
         isOwner: true,
         isApproved: true,
         isBlocked: false,
@@ -50,17 +46,11 @@ if (!users[ownerEmail]) {
         createdAt: new Date().toISOString()
     };
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-    console.log("✅ Owner account created. Email:", ownerEmail);
-} else {
-    // Ensure password is correct (in case of corruption)
-    if (!bcrypt.compareSync(ownerPasswordPlain, users[ownerEmail].password)) {
-        users[ownerEmail].password = bcrypt.hashSync(ownerPasswordPlain, 10);
-        users[ownerEmail].isOwner = true;
-        users[ownerEmail].isApproved = true;
-        users[ownerEmail].isBlocked = false;
-        fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-        console.log("✅ Owner password reset to default.");
-    }
+    console.log("✅ Owner account created.");
+} else if (!bcrypt.compareSync(ownerPass, users[ownerEmail].password)) {
+    users[ownerEmail].password = bcrypt.hashSync(ownerPass, 10);
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    console.log("✅ Owner password reset.");
 }
 
 if (!fs.existsSync(PENDING_FILE)) fs.writeFileSync(PENDING_FILE, JSON.stringify({}, null, 2));
@@ -98,50 +88,34 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// ==================== HEALTH CHECK ====================
 app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        message: '🕋 PURELY HALAL TRADING BOT – No Riba, No Gharar, No Maysir',
-        halalAssets: HALAL_ASSETS.length
-    });
+    res.json({ status: 'ok', message: '🕋 HALAL Trading Bot', halalAssets: HALAL_ASSETS.length });
 });
 
 // ==================== AUTHENTICATION ====================
 app.post('/api/register', (req, res) => {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required' });
-
+    if (!email || !password) return res.status(400).json({ success: false, message: 'Required' });
     const users = readUsers();
-    if (users[email]) return res.status(400).json({ success: false, message: 'User already exists' });
-
+    if (users[email]) return res.status(400).json({ success: false, message: 'Exists' });
     const pending = readPending();
-    if (pending[email]) return res.status(400).json({ success: false, message: 'Request already pending' });
-
-    pending[email] = {
-        email,
-        password: bcrypt.hashSync(password, 10),
-        requestedAt: new Date().toISOString()
-    };
+    if (pending[email]) return res.status(400). json({ success: false, message: 'Pending' });
+    pending[email] = { email, password: bcrypt.hashSync(password, 10), requestedAt: new Date().toISOString() };
     writePending(pending);
-    res.json({ success: true, message: 'Registration request sent to owner.' });
+    res.json({ success: true, message: 'Request sent to owner' });
 });
 
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
     const users = readUsers();
     const user = users[email];
-
     if (!user) {
-        const pending = readPending();
-        if (pending[email]) return res.status(401).json({ success: false, message: 'Pending approval' });
+        if (readPending()[email]) return res.status(401).json({ success: false, message: 'Pending approval' });
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
-
     if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    if (!user.isApproved && !user.isOwner) return res.status(401).json({ success: false, message: 'Account not approved' });
-    if (user.isBlocked) return res.status(401).json({ success: false, message: 'Account blocked' });
-
+    if (!user.isApproved && !user.isOwner) return res.status(401).json({ success: false, message: 'Not approved' });
+    if (user.isBlocked) return res.status(401).json({ success: false, message: 'Blocked' });
     const token = jwt.sign({ email, isOwner: user.isOwner }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ success: true, token, isOwner: user.isOwner });
 });
@@ -158,11 +132,11 @@ function authenticate(req, res, next) {
     }
 }
 
-// ==================== BINANCE REAL API ====================
+// ==================== BINANCE API ====================
 const BINANCE_API = 'https://api.binance.com';
 const BINANCE_TESTNET = 'https://testnet.binance.vision';
 
-function cleanKey(key) { return key ? key.replace(/[\s\n\r\t]+/g, '').trim() : ""; }
+function cleanKey(k) { return k ? k.replace(/[\s\n\r\t]+/g, '').trim() : ""; }
 
 async function binanceRequest(apiKey, secretKey, endpoint, params = {}, method = 'GET', testnet = false) {
     const baseUrl = testnet ? BINANCE_TESTNET : BINANCE_API;
@@ -177,12 +151,11 @@ async function binanceRequest(apiKey, secretKey, endpoint, params = {}, method =
 
 async function getSpotBalance(apiKey, secretKey, testnet = false) {
     try {
-        const account = await binanceRequest(apiKey, secretKey, '/api/v3/account', {}, 'GET', testnet);
-        const usdt = account.balances.find(b => b.asset === 'USDT');
+        const acc = await binanceRequest(apiKey, secretKey, '/api/v3/account', {}, 'GET', testnet);
+        const usdt = acc.balances.find(b => b.asset === 'USDT');
         return parseFloat(usdt?.free || 0);
     } catch { return 0; }
 }
-
 async function getFundingBalance(apiKey, secretKey, testnet = false) {
     try {
         const timestamp = Date.now();
@@ -195,37 +168,54 @@ async function getFundingBalance(apiKey, secretKey, testnet = false) {
         return parseFloat(usdtAsset?.free || 0);
     } catch { return 0; }
 }
-
 async function getCurrentPrice(symbol, testnet = false) {
     const baseUrl = testnet ? BINANCE_TESTNET : BINANCE_API;
     const res = await axios.get(`${baseUrl}/api/v3/ticker/price?symbol=${symbol}`);
     return parseFloat(res.data.price);
 }
-
 async function placeLimitOrder(apiKey, secretKey, symbol, side, quantity, price, testnet = false) {
     return await binanceRequest(apiKey, secretKey, '/api/v3/order', {
         symbol, side, type: 'LIMIT', timeInForce: 'GTC',
         quantity: quantity.toFixed(6), price: price.toFixed(2)
     }, 'POST', testnet);
 }
-
 async function checkOrderStatus(apiKey, secretKey, symbol, orderId, testnet = false) {
     return await binanceRequest(apiKey, secretKey, '/api/v3/order', { symbol, orderId }, 'GET', testnet);
 }
-
 async function cancelOrder(apiKey, secretKey, symbol, orderId, testnet = false) {
     return await binanceRequest(apiKey, secretKey, '/api/v3/order', { symbol, orderId }, 'DELETE', testnet);
 }
+
+// ==================== DIAGNOSTIC ENDPOINT (TELLS YOU WHY KEYS FAIL) ====================
+app.post('/api/test-binance-keys', authenticate, async (req, res) => {
+    const { apiKey, secretKey, accountType } = req.body;
+    const useTestnet = accountType === 'testnet';
+    const baseUrl = useTestnet ? BINANCE_TESTNET : BINANCE_API;
+    try {
+        const timestamp = Date.now();
+        const queryString = `timestamp=${timestamp}&recvWindow=5000`;
+        const signature = crypto.createHmac('sha256', secretKey).update(queryString).digest('hex');
+        const url = `${baseUrl}/api/v3/account?${queryString}&signature=${signature}`;
+        const response = await axios({
+            method: 'GET',
+            url,
+            headers: { 'X-MBX-APIKEY': apiKey },
+            timeout: 10000
+        });
+        res.json({ success: true, message: '✅ API keys are valid!', data: response.data });
+    } catch (error) {
+        const binanceMsg = error.response?.data?.msg || error.message;
+        res.json({ success: false, message: `❌ Binance error: ${binanceMsg}` });
+    }
+});
 
 // ==================== API KEY MANAGEMENT ====================
 app.post('/api/set-api-keys', authenticate, async (req, res) => {
     let { apiKey, secretKey, accountType } = req.body;
     if (!apiKey || !secretKey) return res.status(400).json({ success: false, message: 'Both keys required' });
-
     const cleanApi = cleanKey(apiKey);
     const cleanSecret = cleanKey(secretKey);
     const testnet = accountType === 'testnet';
-
     try {
         const spot = await getSpotBalance(cleanApi, cleanSecret, testnet);
         const funding = await getFundingBalance(cleanApi, cleanSecret, testnet);
@@ -233,28 +223,25 @@ app.post('/api/set-api-keys', authenticate, async (req, res) => {
         users[req.user.email].apiKey = encrypt(cleanApi);
         users[req.user.email].secretKey = encrypt(cleanSecret);
         writeUsers(users);
-        res.json({ success: true, message: `API keys saved. Spot: ${spot} USDT, Funding: ${funding} USDT`, spotBalance: spot, fundingBalance: funding });
+        res.json({ success: true, message: `Saved. Spot: ${spot} USDT, Funding: ${funding} USDT`, spotBalance: spot, fundingBalance: funding });
     } catch (err) {
-        res.status(401).json({ success: false, message: 'Invalid API keys' });
+        res.status(401).json({ success: false, message: 'Invalid API keys (check permissions)' });
     }
 });
 
 app.post('/api/connect-binance', authenticate, async (req, res) => {
     const { accountType } = req.body;
-    const users = readUsers();
-    const user = users[req.user.email];
-    if (!user?.apiKey) return res.status(400).json({ success: false, message: 'No API keys' });
-
+    const user = readUsers()[req.user.email];
+    if (!user?.apiKey) return res.status(400).json({ success: false, message: 'No API keys saved' });
     const apiKey = decrypt(user.apiKey);
     const secretKey = decrypt(user.secretKey);
     const testnet = accountType === 'testnet';
-
     try {
         const spot = await getSpotBalance(apiKey, secretKey, testnet);
         const funding = await getFundingBalance(apiKey, secretKey, testnet);
         res.json({ success: true, spotBalance: spot, fundingBalance: funding, totalBalance: spot + funding });
     } catch {
-        res.status(401).json({ success: false, message: 'Connection failed' });
+        res.status(401).json({ success: false, message: 'Connection failed – invalid keys or permissions' });
     }
 });
 
@@ -276,18 +263,18 @@ app.post('/api/get-balance', authenticate, async (req, res) => {
     res.json({ success: true, spotBalance: spot, fundingBalance: funding, total: spot + funding });
 });
 
-// ==================== HALAL TRADING ENGINE ====================
+// ==================== TRADING ENGINE ====================
 const activeSessions = new Map();
 let assetIndex = 0;
 function nextAsset() {
-    const asset = HALAL_ASSETS[assetIndex];
+    const a = HALAL_ASSETS[assetIndex];
     assetIndex = (assetIndex + 1) % HALAL_ASSETS.length;
-    return asset;
+    return a;
 }
 
 app.post('/api/start-trading', authenticate, async (req, res) => {
     const { investmentAmount, profitPercent, timeLimitHours, accountType } = req.body;
-    if (investmentAmount < 10) return res.status(400).json({ success: false, message: 'Minimum $10' });
+    if (investmentAmount < 10) return res.status(400).json({ success: false, message: 'Min $10' });
     if (profitPercent < 0.1 || profitPercent > 5) return res.status(400).json({ success: false, message: 'Profit 0.1-5%' });
     if (timeLimitHours < 1 || timeLimitHours > 168) return res.status(400).json({ success: false, message: 'Time 1-168h' });
 
@@ -300,8 +287,10 @@ app.post('/api/start-trading', authenticate, async (req, res) => {
     try {
         const spot = await getSpotBalance(apiKey, secretKey, testnet);
         const funding = await getFundingBalance(apiKey, secretKey, testnet);
-        if (spot + funding < investmentAmount) return res.status(400).json({ success: false, message: `Insufficient balance` });
-    } catch { return res.status(401).json({ success: false, message: 'Cannot verify balance' }); }
+        if (spot + funding < investmentAmount) return res.status(400).json({ success: false, message: 'Insufficient balance' });
+    } catch {
+        return res.status(401).json({ success: false, message: 'Cannot verify balance' });
+    }
 
     const sessionId = crypto.randomBytes(16).toString('hex');
     const symbol = nextAsset();
@@ -320,7 +309,7 @@ app.post('/api/start-trading', authenticate, async (req, res) => {
         const orders = readOrders();
         orders[sessionId] = sessionData;
         writeOrders(orders);
-        res.json({ success: true, sessionId, message: `✅ Limit buy order placed: ${quantity.toFixed(6)} ${symbol} @ ${buyPrice}` });
+        res.json({ success: true, sessionId, message: `✅ Limit buy order: ${quantity.toFixed(6)} ${symbol} @ ${buyPrice}` });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -328,7 +317,7 @@ app.post('/api/start-trading', authenticate, async (req, res) => {
 
 app.post('/api/stop-trading', authenticate, (req, res) => {
     const { sessionId } = req.body;
-    if (activeSessions.has(sessionId)) activeSessions.delete(sessionId);
+    activeSessions.delete(sessionId);
     res.json({ success: true, message: 'Stopped' });
 });
 
@@ -360,7 +349,6 @@ setInterval(async () => {
                     trade.sellOrderId = sellOrder.orderId;
                     trade.entryPrice = fillPrice;
                     trade.filledQty = filledQty;
-                    console.log(`Buy filled: ${filledQty} ${trade.symbol} @ ${fillPrice}`);
                 }
             } else if (trade.status === 'SELL_ORDER_PLACED') {
                 const order = await checkOrderStatus(apiKey, secretKey, trade.symbol, trade.sellOrderId, trade.testnet);
@@ -368,7 +356,6 @@ setInterval(async () => {
                     const exitPrice = parseFloat(order.price);
                     const profit = (exitPrice - trade.entryPrice) * trade.filledQty;
                     const profitPercent = (profit / trade.investmentAmount) * 100;
-                    // Save history
                     const historyFile = path.join(TRADES_DIR, trade.userId.replace(/[^a-z0-9]/gi, '_') + '.json');
                     let history = [];
                     if (fs.existsSync(historyFile)) history = JSON.parse(fs.readFileSync(historyFile));
@@ -378,7 +365,6 @@ setInterval(async () => {
                     });
                     fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
                     activeSessions.delete(sid);
-                    console.log(`Trade completed: profit $${profit.toFixed(2)} (${profitPercent.toFixed(2)}%)`);
                 }
             }
             if (Date.now() - trade.startTime > trade.timeLimitHours * 3600000) {
@@ -407,7 +393,6 @@ app.get('/api/admin/pending-users', authenticate, (req, res) => {
     const list = Object.keys(pending).map(e => ({ email: e, requestedAt: pending[e].requestedAt }));
     res.json({ success: true, pending: list });
 });
-
 app.post('/api/admin/approve-user', authenticate, (req, res) => {
     if (!req.user.isOwner) return res.status(403).json({ success: false });
     const { email } = req.body;
@@ -421,9 +406,8 @@ app.post('/api/admin/approve-user', authenticate, (req, res) => {
     writeUsers(users);
     delete pending[email];
     writePending(pending);
-    res.json({ success: true, message: `User ${email} approved` });
+    res.json({ success: true, message: `Approved ${email}` });
 });
-
 app.post('/api/admin/reject-user', authenticate, (req, res) => {
     if (!req.user.isOwner) return res.status(403).json({ success: false });
     const { email } = req.body;
@@ -431,9 +415,8 @@ app.post('/api/admin/reject-user', authenticate, (req, res) => {
     if (!pending[email]) return res.status(404).json({ success: false });
     delete pending[email];
     writePending(pending);
-    res.json({ success: true, message: `User ${email} rejected` });
+    res.json({ success: true, message: `Rejected ${email}` });
 });
-
 app.post('/api/admin/toggle-block', authenticate, (req, res) => {
     if (!req.user.isOwner) return res.status(403).json({ success: false });
     const { email } = req.body;
@@ -441,9 +424,8 @@ app.post('/api/admin/toggle-block', authenticate, (req, res) => {
     if (!users[email]) return res.status(404).json({ success: false });
     users[email].isBlocked = !users[email].isBlocked;
     writeUsers(users);
-    res.json({ success: true, message: `User ${email} is now ${users[email].isBlocked ? 'BLOCKED' : 'ACTIVE'}` });
+    res.json({ success: true, message: `${email} is now ${users[email].isBlocked ? 'BLOCKED' : 'ACTIVE'}` });
 });
-
 app.get('/api/admin/users', authenticate, (req, res) => {
     if (!req.user.isOwner) return res.status(403).json({ success: false });
     const users = readUsers();
@@ -453,7 +435,6 @@ app.get('/api/admin/users', authenticate, (req, res) => {
     }));
     res.json({ success: true, users: list });
 });
-
 app.get('/api/admin/user-balances', authenticate, async (req, res) => {
     if (!req.user.isOwner) return res.status(403).json({ success: false });
     const users = readUsers();
@@ -470,7 +451,6 @@ app.get('/api/admin/user-balances', authenticate, async (req, res) => {
     }
     res.json({ success: true, balances });
 });
-
 app.get('/api/admin/all-trades', authenticate, (req, res) => {
     if (!req.user.isOwner) return res.status(403).json({ success: false });
     const allTrades = {};
@@ -483,7 +463,6 @@ app.get('/api/admin/all-trades', authenticate, (req, res) => {
     }
     res.json({ success: true, trades: allTrades });
 });
-
 app.post('/api/change-password', authenticate, (req, res) => {
     if (!req.user.isOwner) return res.status(403).json({ success: false });
     const { currentPassword, newPassword } = req.body;
@@ -501,10 +480,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🕋 PURELY HALAL TRADING BOT`);
-    console.log(`✅ Owner: mujtabahatif@gmail.com / Mujtabah@2598`);
-    console.log(`✅ ${HALAL_ASSETS.length} Halal assets`);
-    console.log(`✅ Real Binance API | Limit orders | No Riba | No Gharar | No Maysir`);
-    console.log(`✅ Admin: Approve/Reject users, Block/Unblock, View balances & trades`);
-    console.log(`🚀 Server on port ${PORT}`);
+    console.log(`\n🕋 HALAL TRADING BOT`);
+    console.log(`Owner: mujtabahatif@gmail.com / Mujtabah@2598`);
+    console.log(`Port: ${PORT}`);
 });
