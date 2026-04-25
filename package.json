@@ -1,7 +1,7 @@
 {
   "name": "halal-trading-bot",
   "version": "7.0.0",
-  "description": "100% Halal Trading Bot - No Riba, No Gharar, No Maysir, No Leverage",
+  "description": "100% Purely Halal Trading Bot - No Riba, No Gharar, No Maysir, No Leverage",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
